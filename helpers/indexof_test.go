@@ -3,7 +3,7 @@ package helpers
 import (
 	"testing"
 
-	"github.com/dlclark/regexp2/v2/syntax"
+	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 func TestIndexOf_Miss(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"unicode"
 	"unsafe"
 
-	"github.com/dlclark/regexp2/v2/syntax"
+	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 func IndexOfAny(in []rune, find []rune) int {

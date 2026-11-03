@@ -65,6 +65,10 @@ func (v MatchView) GroupRange(num int) (index, length int, ok bool) {
 // and text metadata for every result. Initial setup and growing the engine's
 // buffers may allocate; GroupRange and GroupCount do not allocate.
 func (re *Regexp) FindRunesMatches(input []rune, startAt int, yield func(MatchView) bool) error {
+	return re.FindRunesMatchesWithInterrupt(input, startAt, nil, yield)
+}
+
+func (re *Regexp) FindRunesMatchesWithInterrupt(input []rune, startAt int, checkInterrupt func(), yield func(MatchView) bool) error {
 	if yield == nil {
 		return nil
 	}
@@ -80,6 +84,8 @@ func (re *Regexp) FindRunesMatches(input []rune, startAt int, yield func(MatchVi
 
 	runner := re.getRunner()
 	defer re.putRunner(runner)
+
+	runner.checkInterrupt = checkInterrupt
 	previousMatchLength := -1
 	for {
 		m, err := runner.scan(input, nil, startAt, startAt, previousMatchLength, scanCaptures, re.MatchTimeout)

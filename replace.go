@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/dlclark/regexp2/v2/helpers"
-	"github.com/dlclark/regexp2/v2/syntax"
+	"github.com/ad3n/regexp2/v2/helpers"
+	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 const (

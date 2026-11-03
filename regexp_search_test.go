@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dlclark/regexp2/v2/syntax"
+	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 func TestAlternationWithNegatedStartingCharacter(t *testing.T) {

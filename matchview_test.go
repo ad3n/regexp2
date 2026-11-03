@@ -382,3 +382,42 @@ func TestFindRunesMatchesConcurrent(t *testing.T) {
 		wg.Wait()
 	}
 }
+
+func TestFindRunesMatchesWithInterrupt(t *testing.T) {
+	re := MustCompile("^(a+)+$")
+	input := []rune(strings.Repeat("a", 24) + "!")
+	stop := errors.New("stop matching")
+	checks := 0
+	func() {
+		defer func() {
+			if caught := recover(); caught != stop {
+				t.Fatalf("expected interrupt from matcher, got %v", caught)
+			}
+		}()
+
+		err := re.FindRunesMatchesWithInterrupt(input, 0, func() {
+			checks++
+			if checks == 4 {
+				panic(stop)
+			}
+		}, func(MatchView) bool {
+			t.Fatal("unexpected match")
+			return false
+		})
+		t.Fatalf("match returned before interrupt: %v", err)
+	}()
+
+	matches := 0
+	err := re.FindRunesMatches([]rune("aaa"), 0, func(view MatchView) bool {
+		index, length, ok := view.GroupRange(1)
+		if !ok || index != 0 || length != 3 {
+			t.Fatalf("capture after interrupt = %d, %d, %t", index, length, ok)
+		}
+
+		matches++
+		return true
+	})
+	if err != nil || matches != 1 || checks != 4 {
+		t.Fatalf("reuse after interrupt: err=%v matches=%d checks=%d", err, matches, checks)
+	}
+}

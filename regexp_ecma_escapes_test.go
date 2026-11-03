@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dlclark/regexp2/v2"
+	"github.com/ad3n/regexp2/v2"
 )
 
 // These cases specify ECMA-262 Annex B.1.2's non-Unicode escape grammar.

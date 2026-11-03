@@ -10,13 +10,14 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/dlclark/regexp2/v2/helpers"
-	"github.com/dlclark/regexp2/v2/syntax"
+	"github.com/ad3n/regexp2/v2/helpers"
+	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 type Runner struct {
-	re   *Regexp
-	code *syntax.Code
+	checkInterrupt func()
+	re             *Regexp
+	code           *syntax.Code
 
 	// Keep the byte-sized flags together to avoid padding between word-sized fields.
 	debug           bool
@@ -181,6 +182,10 @@ func (r *Runner) scan(rt []rune, textInfo *matchText, textstart, candidate, prev
 
 	r.startTimeoutWatch()
 	for {
+		if r.checkInterrupt != nil {
+			r.checkInterrupt()
+		}
+
 		if minRequiredLength > 0 {
 			if r.code.RightToLeft {
 				if r.Runtextpos < minRequiredLength {
@@ -246,7 +251,10 @@ func executeDefault(r *Runner) error {
 	if err := r.goTo(0); err != nil {
 		return err
 	}
-	for {
+	for steps := uint(0); ; steps++ {
+		if steps&255 == 0 && r.checkInterrupt != nil {
+			r.checkInterrupt()
+		}
 
 		if r.debug {
 			r.dumpState()
@@ -1374,6 +1382,10 @@ func (r *Runner) forwardchars() int {
 }
 
 func (r *Runner) forwardcharnext() rune {
+	if r.Runtextpos&4095 == 0 && r.checkInterrupt != nil {
+		r.checkInterrupt()
+	}
+
 	var ch rune
 	if r.rightToLeft {
 		r.Runtextpos--
@@ -1413,6 +1425,9 @@ func (r *Runner) runematch(str []rune) bool {
 
 	if !r.caseInsensitive {
 		for c > 0 {
+			if (len(str)-c)&4095 == 0 && r.checkInterrupt != nil {
+				r.checkInterrupt()
+			}
 			length := min(c, runeComparisonChunkSize)
 			c -= length
 			pos -= length
@@ -1422,6 +1437,9 @@ func (r *Runner) runematch(str []rune) bool {
 		}
 	} else {
 		for c != 0 {
+			if c&4095 == 0 && r.checkInterrupt != nil {
+				r.checkInterrupt()
+			}
 			c--
 			pos--
 			if str[c] != unicode.ToLower(r.Runtext[pos]) {
@@ -1455,6 +1473,9 @@ func (r *Runner) refmatch(index, length int) bool {
 	// Compare bounded chunks from the end, preserving fast rejection near the
 	// end while allowing exact spans to use vectorized slice comparisons.
 	for end := length; end > 0; {
+		if (length-end)&4095 == 0 && r.checkInterrupt != nil {
+			r.checkInterrupt()
+		}
 		start := max(0, end-runeComparisonChunkSize)
 		if !helpers.Equals(r.Runtext, index+start, end-start, candidate[start:end]) {
 			if !r.caseInsensitive {
@@ -2771,6 +2792,7 @@ func (re *Regexp) getRunner() *Runner {
 
 // putRunner returns a runner to the re's pool cache.
 func (re *Regexp) putRunner(r *Runner) {
+	r.checkInterrupt = nil
 	r.Runtext = nil
 	r.code = re.code
 	if r.runmatch != nil {
