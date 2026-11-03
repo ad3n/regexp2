@@ -13,13 +13,13 @@ import (
 
 // CharSet combines start-end rune ranges and unicode categories representing a set of characters
 type CharSet struct {
+	sub *CharSet //optional subtractor
+
+	ascii      *asciiBitmap
 	ranges     []SingleRange
 	categories []charCategory
-	sub        *CharSet //optional subtractor
 	negate     bool
 	anything   bool
-
-	ascii *asciiBitmap
 }
 
 type asciiBitmap struct {
@@ -27,8 +27,8 @@ type asciiBitmap struct {
 }
 
 type Category struct {
-	Negate bool
 	Cat    string
+	Negate bool
 }
 
 // Keep the public Category representation and serialized form unchanged.
@@ -36,9 +36,9 @@ type Category struct {
 // matching does not need a name lookup. Both tables and ECMAScript sets are
 // immutable and can be shared when a character set is copied or merged.
 type charCategory struct {
-	Category
 	set   *CharSet
 	table *unicode.RangeTable
+	Category
 }
 
 func newCharCategory(category Category) charCategory {
@@ -464,20 +464,8 @@ func (c Category) String() string {
 
 // CharDescription Produces a human-readable description for a single character.
 func CharDescription(ch rune) string {
-	/*if ch == '\\' {
-		return "\\\\"
-	}
-
-	if ch > ' ' && ch <= '~' {
-		return string(ch)
-	} else if ch == '\n' {
-		return "\\n"
-	} else if ch == ' ' {
-		return "\\ "
-	}*/
-
-	b := &bytes.Buffer{}
-	escape(b, ch, false) //fmt.Sprintf("%U", ch)
+	var b strings.Builder
+	escape(&b, ch, false)
 	return b.String()
 }
 

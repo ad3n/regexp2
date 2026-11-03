@@ -7,20 +7,20 @@ import (
 type RuntimeEngineData struct {
 	Caps               map[int]int        // capnum->index
 	CapNames           map[string]int     // cap group name -> index
-	CapsList           []string           // sorted list of capture group names
-	CapSize            int                // size of the capture array
 	FindFirstChar      func(*Runner) bool // generated candidate search
 	Execute            func(*Runner) error
 	ExecuteQuick       func(*Runner) error // optional bool-only execution with unobservable captures removed
 	StringPrefixFilter StringPrefixFilter  // optional pre-decode candidate search for string input
-	// LeftContextKnown reports that LeftContextRunes was computed by the
-	// code generator. If it is false, decoded string input is never sliced;
-	// older generated engines omit the field and must keep the full string.
-	LeftContextKnown bool
+	CapsList           []string            // sorted list of capture group names
+	CapSize            int                 // size of the capture array
 	// LeftContextRunes is how many runes before a candidate start matching
 	// may inspect. 0 means none, 1 means a single previous rune, and -1
 	// means do not slice (lookbehind or \G). Ignored unless LeftContextKnown.
 	LeftContextRunes int
+	// LeftContextKnown reports that LeftContextRunes was computed by the
+	// code generator. If it is false, decoded string input is never sliced;
+	// older generated engines omit the field and must keep the full string.
+	LeftContextKnown bool
 }
 
 type cacheKey struct {

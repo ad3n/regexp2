@@ -5,19 +5,31 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
-
-func Escape(input string) string {
-	b := &bytes.Buffer{}
-	for _, r := range input {
-		escape(b, r, false)
-	}
-	return b.String()
-}
 
 const meta = `\.+*?()|[]{}^$# `
 
-func escape(b *bytes.Buffer, r rune, force bool) {
+func Escape(input string) string {
+	for i, r := range input {
+		if unicode.IsPrint(r) && !strings.ContainsRune(meta, r) && (r != utf8.RuneError || strings.HasPrefix(input[i:], "\uFFFD")) {
+			continue
+		}
+
+		var buf strings.Builder
+		buf.Grow(len(input))
+		buf.WriteString(input[:i])
+		for _, ch := range input[i:] {
+			escape(&buf, ch, false)
+		}
+
+		return buf.String()
+	}
+
+	return input
+}
+
+func escape(b *strings.Builder, r rune, force bool) {
 	if unicode.IsPrint(r) {
 		if strings.ContainsRune(meta, r) || force {
 			b.WriteRune('\\')

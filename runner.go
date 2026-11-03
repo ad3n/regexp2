@@ -19,17 +19,18 @@ type Runner struct {
 	re             *Regexp
 	code           *syntax.Code
 
-	// Keep the byte-sized flags together to avoid padding between word-sized fields.
-	debug           bool
-	ignoreTimeout   bool
-	rightToLeft     bool
-	caseInsensitive bool
+	runmatch *Match // result object
+	// Reusable metadata for internal string scans. Returned matches own theirs.
+	textInfo *matchText
 
-	Runtextstart int // starting point for search
+	// landmarks holds what the required landmark searches learned about
+	// Runtext. Scans of the same Runtext between getRunner and putRunner
+	// start where earlier ones ended, so they keep it. FindNextMatch moves it
+	// to the match it returns and back.
+	landmarks    *requiredLandmarkState
+	replaceParts []string
 
-	Runtext    []rune // text to search
-	Runtextpos int    // current position in text
-	Runtextend int
+	Runtext []rune // text to search
 
 	// The backtracking stack.  Opcodes use this to store data regarding
 	// what they have matched and where to backtrack to.  Each "frame" on
@@ -43,8 +44,7 @@ type Runner struct {
 	// instruction pointer to that code position, and mark the opcode
 	// with a backtracking flag ("Back").  Each opcode then knows how to
 	// handle its own data.
-	runtrack    []int
-	Runtrackpos int
+	runtrack []int
 
 	// This stack is used to track text positions across different opcodes.
 	// For example, in /(a*b)+/, the parentheses result in a SetMark/CaptureMark
@@ -53,20 +53,22 @@ type Runner struct {
 	// Opcodes which push onto this stack are always paired with other opcodes
 	// which will pop the value from it later.  A successful match should mean
 	// that this stack is empty.
-	runstack    []int
-	Runstackpos int
+	runstack []int
 
 	// The crawl stack is used to keep track of captures.  Every time a group
 	// has a capture, we push its group number onto the runcrawl stack.  In
 	// the case of a balanced match, we push BOTH groups onto the stack.
-	runcrawl    []int
+	runcrawl []int
+
+	Runtextstart int // starting point for search
+
+	Runtextpos  int // current position in text
+	Runtextend  int
+	Runtrackpos int
+	Runstackpos int
 	runcrawlpos int
 
 	runtrackcount int // count of states that may do backtracking
-
-	runmatch *Match // result object
-	// Reusable metadata for internal string scans. Returned matches own theirs.
-	textInfo *matchText
 
 	timeout  time.Duration // timeout in milliseconds (needed for actual)
 	deadline fasttime
@@ -80,11 +82,12 @@ type Runner struct {
 	// position and landmarkCandidate.
 	landmarkCore      int
 	landmarkCandidate int
-	// landmarks holds what the required landmark searches learned about
-	// Runtext. Scans of the same Runtext between getRunner and putRunner
-	// start where earlier ones ended, so they keep it. FindNextMatch moves it
-	// to the match it returns and back.
-	landmarks *requiredLandmarkState
+
+	// Keep the byte-sized flags together to avoid padding between word-sized fields.
+	debug           bool
+	ignoreTimeout   bool
+	rightToLeft     bool
+	caseInsensitive bool
 }
 
 // scanMode controls capture elision and ownership independently of text metadata.
@@ -2006,11 +2009,11 @@ type requiredLandmarkMatch struct {
 // cursor only moves forward. A call makes O(1) calls to each cursor per start
 // it passes, so the calls on one input read O(n) runes per alternative.
 type requiredLandmarkSearch struct {
+	alternatives []requiredLandmarkCursor
 	// last is the last core found, if found. It is also the result of a
 	// call from any position up to last.CoreStart.
-	last         requiredLandmarkMatch
-	found        bool
-	alternatives []requiredLandmarkCursor
+	last  requiredLandmarkMatch
+	found bool
 }
 
 // next returns the first core at or after startAt. Its End holds for

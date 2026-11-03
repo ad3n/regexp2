@@ -16,7 +16,7 @@ This is a go-gettable library, so install is easy:
 Version 2 includes changes that may affect compatibility with existing v1 users:
 
 * This fork uses the module path `github.com/ad3n/regexp2/v2`.
-* The minimum supported Go version is now Go 1.25.
+* The minimum supported Go version is now Go 1.27.3.
 * Changes to support https://github.com/dlclark/regexp2cg are merged in to support generated regex engines.
 * `Regexp.Split` is now available for splitting strings with regexp matches.
 * The new `compat` sub-package provides a [`regexp` compatibility adapter](#regexp-compatibility-adapter) with the same `Find*` and `Match*` method signatures as `regexp.Regexp`, plus a `compat.Matcher` interface that is implemented by both `*regexp.Regexp` and the adapter.
@@ -385,7 +385,7 @@ With `ECMAScript|Unicode`, property escapes use the exact names and aliases allo
 
 These forms also work with `\P` and inside character classes. Names are case-sensitive; spaces and hyphens are not ignored. Bare script names, unsupported properties such as `GCB`, and binary properties with explicit values such as `ASCII=Yes` are rejected. Without `Unicode`, ECMAScript property escapes retain identity-escape behavior. The `/v` Unicode sets flag and properties of strings such as `RGI_Emoji` are not supported.
 
-Categories, scripts, and binary properties provided by Go follow the consumer's standard-library `unicode.Version`: Unicode 15.0.0 in Go 1.25–1.26, and Unicode 17.0.0 in Go 1.27. New scripts therefore require a Go toolchain that includes them. `Assigned` and the special script value `Unknown` also follow Go's assignments.
+Categories, scripts, and binary properties provided by Go follow the consumer's standard-library `unicode.Version` (Unicode 17.0.0 in Go 1.27). New scripts therefore require a Go toolchain that includes them. `Assigned` and the special script value `Unknown` also follow Go's assignments.
 
 Properties Go doesn't expose use supplemental Unicode 17.0.0 data, reusing this package's existing tables where available. Script extensions combine Go's script tables with explicit Unicode 17.0.0 extension overrides. The package doesn't embed replacements for Go's categories, scripts, or built-in binary properties. Regenerate only the supplemental data and exact alias mappings with `go run ./internal/unicodegen -ucd /path/to/UCD.zip`, using the pinned [Unicode 17.0.0 archive](https://www.unicode.org/Public/17.0.0/ucd/UCD.zip). Consumers don't need to run the generator.
 

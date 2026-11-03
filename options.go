@@ -66,8 +66,8 @@ type CompileOption interface {
 }
 
 type compileConfig struct {
-	regexOptions         RegexOptions
 	optimizations        OptimizationOptions
+	regexOptions         RegexOptions
 	codeGen              bool
 	debug                bool
 	maintainCaptureOrder bool

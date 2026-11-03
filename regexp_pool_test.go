@@ -713,3 +713,21 @@ func safeSlice(s string, idx, ln int) string {
 	}
 	return s[idx : idx+ln]
 }
+
+func TestEscapeUnchangedAllocs(t *testing.T) {
+	skipIfAllocsUnreliable(t)
+	input := "café世界\uFFFD"
+	if allocs := testing.AllocsPerRun(100, func() {
+		if got := Escape(input); got != input {
+			t.Fatalf("Escape(%q) = %q", input, got)
+		}
+	}); allocs != 0 {
+		t.Fatalf("allocs/op = %v, want 0", allocs)
+	}
+}
+
+func TestEscapeMalformedUTF8(t *testing.T) {
+	if got, want := Escape("é\xff.\xfe"), "é\uFFFD\\.\uFFFD"; got != want {
+		t.Fatalf("Escape = %q, want %q", got, want)
+	}
+}

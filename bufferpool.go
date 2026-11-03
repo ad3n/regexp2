@@ -108,9 +108,9 @@ var (
 	pooledByteBuffers      = newPooledSliceBuffers[byte](4<<10, 16<<10, 64<<10, 256<<10, 1<<20)
 )
 
-func getPooledReplaceBuffer(neededBytes, maxSize int) (*bytes.Buffer, *[]byte) {
+func getPooledReplaceBuffer(neededBytes, maxSize int) (bytes.Buffer, *[]byte) {
 	buf, pooled := pooledByteBuffers.get(neededBytes, maxSize)
-	return bytes.NewBuffer(buf[:0]), pooled
+	return *bytes.NewBuffer(buf[:0]), pooled
 }
 
 func putPooledReplaceBuffer(buf *bytes.Buffer, pooled *[]byte) {

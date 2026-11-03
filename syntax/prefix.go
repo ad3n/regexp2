@@ -31,8 +31,8 @@ func getFirstCharsPrefix(tree *RegexTree) *Prefix {
 
 type regexFcd struct {
 	intStack        []int
-	intDepth        int
 	fcStack         []regexFc
+	intDepth        int
 	fcDepth         int
 	skipAllChildren bool // don't process any more children at the current level
 	skipchild       bool // don't process the current child.

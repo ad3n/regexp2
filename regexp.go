@@ -31,28 +31,12 @@ var (
 // Regexp is the representation of a compiled regular expression.
 // A Regexp is safe for concurrent use by multiple goroutines.
 type Regexp struct {
-	// A match will time out if it takes (approximately) more than
-	// MatchTimeout. This is a safety check in case the match
-	// encounters catastrophic backtracking.  The default value
-	// (DefaultMatchTimeout) causes all time out checking to be
-	// suppressed.
-	MatchTimeout time.Duration
-
-	// read-only after Compile
-	pattern string       // as passed to Compile
-	options RegexOptions // options
-	debug   bool
-
 	caps                  map[int]int      // public group number -> dense capture slot
 	capnames              map[string]int   // capture group name -> first public group number
 	duplicateCapnames     map[string][]int // ECMAScript name -> dense capture slots
 	duplicateGroupNumbers map[string][]int // ECMAScript name -> public group numbers; shared when dense
-	capslist              []string         // sorted list of capture group names
-	capsize               int              // size of the capture array
 
 	code *syntax.Code // compiled program
-
-	optimizations OptimizationOptions
 
 	// cache of machines for running regexp
 	runnerPool *sync.Pool
@@ -66,9 +50,27 @@ type Regexp struct {
 	stringPrefixFilter StringPrefixFilter
 	prefixSearch       *equalASCIIPrefixSearch // immutable search masks shared by string and rune finders
 	quickCode          *syntax.Code            // bool-only program with unobservable captures removed
+
+	// read-only after Compile
+	pattern  string   // as passed to Compile
+	capslist []string // sorted list of capture group names
+
+	optimizations OptimizationOptions
+
+	// A match will time out if it takes (approximately) more than
+	// MatchTimeout. This is a safety check in case the match
+	// encounters catastrophic backtracking.  The default value
+	// (DefaultMatchTimeout) causes all time out checking to be
+	// suppressed.
+	MatchTimeout time.Duration
+
+	capsize int // size of the capture array
+
 	// leftContextRunes is used when code is nil (registered engines).
 	// The interpreter reads the same value from code.LeftContextRunes.
 	leftContextRunes int
+	options          RegexOptions // options
+	debug            bool
 }
 
 // Compile parses a regular expression and returns, if successful,
@@ -710,15 +712,15 @@ func (re *Regexp) initCaches() {
 }
 
 type replacerDataCache struct {
-	mu      sync.Mutex
-	maxSize int
 	ll      *list.List
 	cache   map[string]*list.Element
+	maxSize int
+	mu      sync.Mutex
 }
 
 type replacerDataCacheEntry struct {
-	key  string
 	data *syntax.ReplacerData
+	key  string
 }
 
 func newReplacerDataCache(maxSize int) *replacerDataCache {

@@ -8,41 +8,42 @@ import (
 )
 
 type FindOptimizations struct {
-	rightToLeft  bool
-	asciiLookups [][]uint
+	LiteralAfterLoop *LiteralAfterLoop
+	LandmarkChain    *RequiredLandmarkChain
+	LeadingPrefix    string
+	asciiLookups     [][]uint
 
-	FindMode             FindNextStartingPositionMode
-	LeadingAnchor        NodeType
-	TrailingAnchor       NodeType
-	MinRequiredLength    int
-	MaxPossibleLength    int
-	LeadingPrefix        string
 	LeadingPrefixes      []string
 	LeadingPrefixesRunes [][]rune
 	//LeadingStrings    *helpers.StringSearchValues
 
-	FixedDistanceLiteral    FixedDistanceLiteral
 	FixedDistanceSets       []FixedDistanceSet
-	LiteralAfterLoop        *LiteralAfterLoop
-	LandmarkChain           *RequiredLandmarkChain
 	LeadingPrefixFirstRunes []rune
+	FixedDistanceLiteral    FixedDistanceLiteral
+
+	FindMode          FindNextStartingPositionMode
+	MinRequiredLength int
+	MaxPossibleLength int
+	LeadingAnchor     NodeType
+	TrailingAnchor    NodeType
+	rightToLeft       bool
 }
 
 type LiteralAfterLoop struct {
-	String           string
-	StringIgnoreCase bool
-	Char             rune
-	Chars            []rune
-
 	LoopNode *RegexNode
+	String   string
+	Chars    []rune
+
+	Char             rune
+	StringIgnoreCase bool
 }
 
 type FixedDistanceSet struct {
 	Set      *CharSet
-	Chars    []rune
-	Negated  bool
 	Range    *SingleRange
+	Chars    []rune
 	Distance int
+	Negated  bool
 }
 
 type FixedDistanceLiteral struct {
@@ -77,9 +78,6 @@ type RequiredLandmark struct {
 }
 
 type RequiredLandmarkAlternative struct {
-	// Literal is the core token for literal alternatives. When non-empty, it
-	// must match exactly at the candidate core position, and Set must be nil.
-	Literal []rune
 
 	// Set is the core token for character-class alternatives. When non-nil, it
 	// must match between MinRepeat and MaxRepeat runes at the candidate core
@@ -101,6 +99,10 @@ type RequiredLandmarkAlternative struct {
 	// from this set must follow the core. The runner validates the requirement,
 	// but does not consume optional trailing whitespace into the landmark end.
 	TrailingWhitespaceSet *CharSet
+
+	// Literal is the core token for literal alternatives. When non-empty, it
+	// must match exactly at the candidate core position, and Set must be nil.
+	Literal []rune
 
 	// MinRepeat and MaxRepeat describe the core token width. Literal alternatives
 	// use 1..1 regardless of literal length because the literal is matched as one

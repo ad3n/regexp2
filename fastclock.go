@@ -22,17 +22,14 @@ type fasttime int64
 // extra time). This ensures that if regexp2 with timeouts
 // stops being used we will stop background work.
 type fastclock struct {
-	// instances of atomicTime must be at the start of the struct (or at least 64-bit aligned)
-	// otherwise 32-bit architectures will panic
-
+	start    time.Time  // Time corresponding to fasttime(0)
 	current  atomicTime // Current time (approximate)
 	clockEnd atomicTime // When clock updater is supposed to stop (>= any existing deadline)
 
 	// current and clockEnd can be read via atomic loads.
 	// Reads and writes of other fields require mu to be held.
 	mu      sync.Mutex
-	start   time.Time // Time corresponding to fasttime(0)
-	running bool      // Is a clock updater running?
+	running bool // Is a clock updater running?
 }
 
 var fast fastclock
@@ -138,7 +135,7 @@ func runClock() {
 	fast.running = false
 }
 
-type atomicTime struct{ v int64 } // Should change to atomic.Int64 when we can use go 1.19
+type atomicTime struct{ v atomic.Int64 }
 
-func (t *atomicTime) read() fasttime   { return fasttime(atomic.LoadInt64(&t.v)) }
-func (t *atomicTime) write(v fasttime) { atomic.StoreInt64(&t.v, int64(v)) }
+func (t *atomicTime) read() fasttime   { return fasttime(t.v.Load()) }
+func (t *atomicTime) write(v fasttime) { t.v.Store(int64(v)) }

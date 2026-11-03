@@ -49,24 +49,24 @@ func newWriter(quickCaptureSlots []bool) writer {
 }
 
 type writer struct {
-	emitted []int
+	stringhash    map[string]int
+	sethash       map[string]int
+	preconsumed   map[*RegexNode]bool
+	dispatchInfo  map[*RegexNode]dispatchInfo
+	dispatchCodes map[*RegexNode]int
+	dispatchGotos map[*RegexNode][]int
+	caps          map[int]int
+	emitted       []int
 
 	intStack          []int
-	curpos            int
-	stringhash        map[string]int
 	stringtable       [][]rune
-	sethash           map[string]int
 	settable          []*CharSet
 	dispatchtable     []DispatchTable
-	preconsumed       map[*RegexNode]bool
-	dispatchInfo      map[*RegexNode]dispatchInfo
-	dispatchCodes     map[*RegexNode]int
-	dispatchGotos     map[*RegexNode][]int
-	counting          bool
+	quickCaptureSlots []bool
+	curpos            int
 	count             int
 	trackcount        int
-	caps              map[int]int
-	quickCaptureSlots []bool
+	counting          bool
 	ecma              bool
 }
 

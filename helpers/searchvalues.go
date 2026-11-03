@@ -133,10 +133,9 @@ func (s RuneSearchValues) LastIndexOfAnyExcept(chars []rune) int {
 
 type StringSearchValues struct {
 	vals        [][]rune
-	ignoreCase  bool
+	firstChars  RuneSearchValues
 	shortestVal int
-
-	firstChars RuneSearchValues
+	ignoreCase  bool
 }
 
 func NewStringSearchValues(vals [][]rune, ignoreCase bool) StringSearchValues {

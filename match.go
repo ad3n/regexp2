@@ -57,20 +57,20 @@ type Capture struct {
 }
 
 type matchText struct {
-	runes            []rune
+	// landmarkMatch is the last match that FindNextMatch found in this text.
+	// The first call to continue from it takes its landmarks.
+	landmarkMatch    atomic.Pointer[Match]
 	input            string
-	hasStringInput   bool
+	runes            []rune
+	byteOffsets      []int
+	initialCapture   [1]Capture
 	runeOffset       int // original-string rune index of runes[0]
 	byteOffset       int // original-string byte index of runes[0]
-	byteOffsets      []int
+	hasStringInput   bool
 	byteOffsetsReady bool
 	// The first returned capture retains this metadata anyway. Store it here
 	// to avoid a separate allocation; subsequent matches need their own record.
 	initialCaptureUsed bool
-	initialCapture     [1]Capture
-	// landmarkMatch is the last match that FindNextMatch found in this text.
-	// The first call to continue from it takes its landmarks.
-	landmarkMatch atomic.Pointer[Match]
 }
 
 // String returns the captured text. For string input it is a slice of the

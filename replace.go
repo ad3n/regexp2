@@ -3,17 +3,20 @@ package regexp2
 import (
 	"bytes"
 	"errors"
+	"slices"
+	"unsafe"
 
 	"github.com/ad3n/regexp2/v2/helpers"
 	"github.com/ad3n/regexp2/v2/syntax"
 )
 
 const (
-	replaceSpecials     = 4
-	replaceLeftPortion  = -1
-	replaceRightPortion = -2
-	replaceLastGroup    = -3
-	replaceWholeString  = -4
+	maxCachedReplaceParts = 1024
+	replaceSpecials       = 4
+	replaceLeftPortion    = -1
+	replaceRightPortion   = -2
+	replaceLastGroup      = -3
+	replaceWholeString    = -4
 )
 
 // MatchEvaluator is a function that takes a match and returns a replacement string to be used
@@ -205,7 +208,7 @@ func replaceRunnerLTR(regex *Regexp, data *syntax.ReplacerData, input string, st
 
 	buf, pooledBuf := getPooledReplaceBuffer(len(input), regex.optimizations.MaxCachedReplaceBufferLength)
 	if pooledBuf != nil {
-		defer putPooledReplaceBuffer(buf, pooledBuf)
+		defer putPooledReplaceBuffer(&buf, pooledBuf)
 	}
 
 	prevat := 0
@@ -216,10 +219,10 @@ func replaceRunnerLTR(regex *Regexp, data *syntax.ReplacerData, input string, st
 
 		local := m.runeSliceIndex()
 		if local != prevat {
-			writeUnmatched(buf, input, &d, prevat, local)
+			writeUnmatched(&buf, input, &d, prevat, local)
 		}
 		prevat = local + m.RuneLength
-		replacementImpl(data, buf, m)
+		replacementImpl(data, &buf, m)
 
 		count--
 		if count == 0 {
@@ -233,7 +236,7 @@ func replaceRunnerLTR(regex *Regexp, data *syntax.ReplacerData, input string, st
 	}
 
 	if prevat < len(text) {
-		writeUnmatched(buf, input, &d, prevat, len(text))
+		writeUnmatched(&buf, input, &d, prevat, len(text))
 	}
 	return buf.String(), nil
 }
@@ -247,10 +250,19 @@ func replaceRunnerRTL(regex *Regexp, data *syntax.ReplacerData, input string, st
 	d := decodeInput(input, startAt, 0, regex.optimizations.MaxCachedRuneBufferLength)
 	text := d.runes
 	textInfo := runner.stringMatchText(input, text, 0, 0)
+	parts := runner.replaceParts
+	runner.replaceParts = nil
 	defer func() {
+		limit := regex.optimizations.MaxCachedReplaceBufferLength
+		if cap(parts) <= maxCachedReplaceParts && keepCacheBytes(limit, cap(parts)*int(unsafe.Sizeof(""))) {
+			clear(parts)
+			runner.replaceParts = parts[:0]
+		}
+
 		regex.putRunner(runner)
 		d.release()
 	}()
+
 	runeStart := d.runeStart
 	if startAt >= 0 && runeStart < 0 {
 		return "", errors.New("startAt must align to the start of a valid rune in the input string")
@@ -269,11 +281,10 @@ func replaceRunnerRTL(regex *Regexp, data *syntax.ReplacerData, input string, st
 
 	buf, pooledBuf := getPooledReplaceBuffer(len(input), regex.optimizations.MaxCachedReplaceBufferLength)
 	if pooledBuf != nil {
-		defer putPooledReplaceBuffer(buf, pooledBuf)
+		defer putPooledReplaceBuffer(&buf, pooledBuf)
 	}
 
 	prevat := len(text)
-	var al []string
 
 	for m != nil {
 		if m.balancing {
@@ -284,13 +295,13 @@ func replaceRunnerRTL(regex *Regexp, data *syntax.ReplacerData, input string, st
 		if local+m.RuneLength != prevat {
 			// As in writeUnmatched, only ASCII permits copying original bytes.
 			if d.ascii {
-				al = append(al, input[local+m.RuneLength:prevat])
+				parts = append(parts, input[local+m.RuneLength:prevat])
 			} else {
-				al = append(al, string(text[local+m.RuneLength:prevat]))
+				parts = append(parts, string(text[local+m.RuneLength:prevat]))
 			}
 		}
 		prevat = local
-		replacementImplRTL(data, &al, m)
+		replacementImplRTL(data, &parts, m)
 
 		count--
 		if count == 0 {
@@ -304,11 +315,13 @@ func replaceRunnerRTL(regex *Regexp, data *syntax.ReplacerData, input string, st
 	}
 
 	if prevat > 0 {
-		writeUnmatched(buf, input, &d, 0, prevat)
+		writeUnmatched(&buf, input, &d, 0, prevat)
 	}
-	for i := len(al) - 1; i >= 0; i-- {
-		buf.WriteString(al[i])
+
+	for _, part := range slices.Backward(parts) {
+		buf.WriteString(part)
 	}
+
 	return buf.String(), nil
 }
 

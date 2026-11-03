@@ -10,8 +10,8 @@ import (
 // look behind a candidate start, the slice may begin at that candidate instead
 // of byte 0.
 type decodedInput struct {
-	runes       []rune
 	pooled      *[]rune
+	runes       []rune
 	runeStart   int  // index in runes of the requested startAt; -1 if not a rune boundary
 	runeOffset  int  // original-string rune index of runes[0]
 	byteOffset  int  // original-string byte index of runes[0]

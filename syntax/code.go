@@ -110,26 +110,26 @@ const (
 )
 
 type Code struct {
+	Caps              map[int]int        // mapping of user group numbers -> impl group slots
+	FcPrefix          *Prefix            // the set of candidate first characters (may be null)
+	BmPrefix          *BmPrefix          // the fixed prefix string as a Boyer-Moore machine (may be null)
+	FindOptimizations *FindOptimizations // analyzed candidate search strategy
 	Codes             []int              // the code
 	Strings           [][]rune           // string table
 	Sets              []*CharSet         //character set table
 	Dispatches        []DispatchTable    // shared match tables for deterministic alternations
-	TrackCount        int                // how many instructions use backtracking
-	Caps              map[int]int        // mapping of user group numbers -> impl group slots
-	Capsize           int                // number of impl group slots
-	FcPrefix          *Prefix            // the set of candidate first characters (may be null)
-	BmPrefix          *BmPrefix          // the fixed prefix string as a Boyer-Moore machine (may be null)
-	Anchors           AnchorLoc          // the set of zero-length start anchors (RegexFCD.Bol, etc)
-	RightToLeft       bool               // true if right to left
-	FindOptimizations *FindOptimizations // analyzed candidate search strategy
 	QuickCodes        []int              // bool-only code with unobservable captures removed
 	QuickDispatches   []DispatchTable    // lightweight tables targeting QuickCodes
 	CaptureSlotInUse  []bool             // capture slots observable by the pattern itself during quick matches
+	TrackCount        int                // how many instructions use backtracking
+	Capsize           int                // number of impl group slots
 	// LeftContextRunes is how many runes before a candidate start matching may
 	// inspect. 0 means none, 1 means a single previous rune (or slack so ^/\A
 	// do not see the candidate as the origin), and -1 means do not slice
 	// (lookbehind or \G).
 	LeftContextRunes int
+	Anchors          AnchorLoc // the set of zero-length start anchors (RegexFCD.Bol, etc)
+	RightToLeft      bool      // true if right to left
 }
 
 // DispatchTable maps disjoint character sets to branch indices. Larger tables

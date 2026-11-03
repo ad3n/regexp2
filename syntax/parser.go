@@ -122,8 +122,19 @@ type parser struct {
 	concatenation *RegexNode
 	unit          *RegexNode
 
+	caps     map[int]int
+	capnames map[string]int
+	// ECMAScript names can refer to multiple distinct capture slots.
+	namedCaptures map[string][]int
+	capturePaths  map[string][]captureAlternative
+
 	patternRaw string
 	pattern    []rune
+
+	capnumlist  []int
+	capnamelist []string
+
+	optionsStack []RegexOptions
 
 	currentPos int
 
@@ -132,20 +143,11 @@ type parser struct {
 	captop   int
 	capsize  int
 
-	caps     map[int]int
-	capnames map[string]int
-	// ECMAScript names can refer to multiple distinct capture slots.
-	namedCaptures  map[string][]int
+	options        RegexOptions
 	duplicateNames bool
-	capturePaths   map[string][]captureAlternative
 
 	maintainCaptureOrder bool
 
-	capnumlist  []int
-	capnamelist []string
-
-	options         RegexOptions
-	optionsStack    []RegexOptions
 	ignoreNextParen bool
 }
 

@@ -17,12 +17,12 @@ const MultiVsRepeaterLimit = 64
 type RegexTree struct {
 	Root              *RegexNode
 	Caps              map[int]int
-	Capnumlist        []int
-	Captop            int
 	Capnames          map[string]int
-	Caplist           []string
-	Options           RegexOptions
 	FindOptimizations *FindOptimizations
+	Capnumlist        []int
+	Caplist           []string
+	Captop            int
+	Options           RegexOptions
 }
 
 // It is built into a parsed tree for a regular expression.
@@ -56,15 +56,15 @@ type RegexTree struct {
 // n.operands, an an object (either a string or a set)
 // is stored in n.data
 type RegexNode struct {
-	T        NodeType
+	Set      *CharSet
+	Parent   *RegexNode
 	Children []*RegexNode
 	Str      []rune
-	Set      *CharSet
-	Ch       rune
 	M        int
 	N        int
+	T        NodeType
+	Ch       rune
 	Options  RegexOptions
-	Parent   *RegexNode
 }
 
 type NodeType int32
@@ -2432,9 +2432,9 @@ func (n *RegexNode) TryGetJoinableLengthCheckChildRange(childIndex int, required
 }
 
 type StartingLiteral struct {
-	Range    SingleRange
 	String   []rune
 	SetChars []rune
+	Range    SingleRange
 	Negated  bool
 }
 
