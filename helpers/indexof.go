@@ -70,15 +70,6 @@ func IndexOfAny3(in []rune, find1, find2, find3 rune) int {
 	return -1
 }
 
-func IndexOfAnyInRange(in []rune, first, last rune) int {
-	for i, c := range in {
-		if c >= first && c <= last {
-			return i
-		}
-	}
-	return -1
-}
-
 func IndexOfAnyExcept(in []rune, bad []rune) int {
 	for i, c := range in {
 		found := false

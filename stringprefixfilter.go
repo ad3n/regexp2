@@ -143,14 +143,11 @@ func (s asciiSetStringScanner) index(input string) int {
 		if len(s.chars) == 1 {
 			return strings.IndexByte(input, s.chars[0])
 		}
+
 		return strings.IndexAny(input, s.chars)
 	}
-	for i := 0; i < len(input); i++ {
-		if input[i] >= s.first && input[i] <= s.last {
-			return i
-		}
-	}
-	return -1
+
+	return helpers.IndexByteInRange(input, s.first, s.last)
 }
 
 // A literal U+FFFD also matches invalid UTF-8 bytes once decoded. Keep the
