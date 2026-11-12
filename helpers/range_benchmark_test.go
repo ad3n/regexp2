@@ -9,7 +9,7 @@ import (
 var rangeResult int
 
 func BenchmarkRangeScan(b *testing.B) {
-	for _, n := range []int{8, 16, 32, 256, 32768} {
+	for _, n := range []int{1, 2, 3, 4, 7, 8, 15, 16, 17, 32, 256, 32768} {
 		for _, pos := range []string{"miss", "first", "last"} {
 			data := []byte(strings.Repeat("z", n))
 			if pos == "first" {

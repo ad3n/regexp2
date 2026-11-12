@@ -25,6 +25,10 @@ func TestRangeGuardPages(t *testing.T) {
 		memory[i] = 0x7f
 	}
 
+	for i := 2*page - 4; i < 2*page; i++ {
+		memory[i] = 0
+	}
+
 	for _, region := range [][]byte{memory[:page], memory[2*page:]} {
 		if err := syscall.Mprotect(region, syscall.PROT_NONE); err != nil {
 			t.Fatal(err)

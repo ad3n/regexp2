@@ -8,10 +8,12 @@ import (
 )
 
 type FindOptimizations struct {
-	LiteralAfterLoop *LiteralAfterLoop
-	LandmarkChain    *RequiredLandmarkChain
-	LeadingPrefix    string
-	asciiLookups     [][]uint
+	LiteralAfterLoop        *LiteralAfterLoop
+	LandmarkChain           *RequiredLandmarkChain
+	LeadingPrefixFirstASCII *[2]uint64
+	LeadingPrefix           string
+	LeadingPrefixRunes      []rune
+	asciiLookups            [][]uint
 
 	LeadingPrefixes      []string
 	LeadingPrefixesRunes [][]rune
@@ -21,33 +23,39 @@ type FindOptimizations struct {
 	LeadingPrefixFirstRunes []rune
 	FixedDistanceLiteral    FixedDistanceLiteral
 
-	FindMode          FindNextStartingPositionMode
-	MinRequiredLength int
-	MaxPossibleLength int
-	LeadingAnchor     NodeType
-	TrailingAnchor    NodeType
-	rightToLeft       bool
+	FindMode           FindNextStartingPositionMode
+	MinRequiredLength  int
+	MaxPossibleLength  int
+	LeadingAnchor      NodeType
+	TrailingAnchor     NodeType
+	LeadingPrefixASCII bool
+	rightToLeft        bool
 }
 
 type LiteralAfterLoop struct {
-	LoopNode *RegexNode
-	String   string
-	Chars    []rune
+	LoopNode    *RegexNode
+	CharsASCII  *[2]uint64
+	String      string
+	StringRunes []rune
+	Chars       []rune
 
 	Char             rune
+	StringASCII      bool
 	StringIgnoreCase bool
 }
 
 type FixedDistanceSet struct {
-	Set      *CharSet
-	Range    *SingleRange
-	Chars    []rune
-	Distance int
-	Negated  bool
+	Set        *CharSet
+	CharsASCII *[2]uint64
+	Range      *SingleRange
+	Chars      []rune
+	Distance   int
+	Negated    bool
 }
 
 type FixedDistanceLiteral struct {
 	S        string
+	Runes    []rune
 	C        rune
 	Distance int
 }
@@ -365,7 +373,65 @@ func newFindOptimizations(tree *RegexTree, opt ParseOptions) *FindOptimizations 
 		}
 	}
 
+	f.prepareSearchLiterals()
+	f.prepareSearchSets()
 	return f
+}
+
+// Decode and classify pattern-only search data before sharing the compiled regex.
+func (f *FindOptimizations) prepareSearchLiterals() {
+	switch f.FindMode {
+	case LeadingString_LeftToRight, LeadingString_OrdinalIgnoreCase_LeftToRight:
+		f.LeadingPrefixRunes = []rune(f.LeadingPrefix)
+		f.LeadingPrefixASCII = isASCIIText(f.LeadingPrefix)
+	case FixedDistanceString_LeftToRight:
+		f.FixedDistanceLiteral.Runes = []rune(f.FixedDistanceLiteral.S)
+	case LiteralAfterLoop_LeftToRight:
+		literal := f.LiteralAfterLoop
+		if literal.String != "" {
+			literal.StringRunes = []rune(literal.String)
+			literal.StringASCII = isASCIIText(literal.String)
+		}
+	}
+}
+
+// Small searches keep their direct comparisons; larger ASCII needles share
+// a membership mask across every resumed search. General Unicode needles
+// retain the rune list. Large character classes already have their own bitmap.
+func (f *FindOptimizations) prepareSearchSets() {
+	f.LeadingPrefixFirstASCII = asciiSearchMask(f.LeadingPrefixFirstRunes)
+	for i := range f.FixedDistanceSets {
+		set := &f.FixedDistanceSets[i]
+		if len(set.Chars) <= 5 {
+			set.CharsASCII = asciiSearchMask(set.Chars)
+		}
+	}
+	if f.LiteralAfterLoop != nil {
+		f.LiteralAfterLoop.CharsASCII = asciiSearchMask(f.LiteralAfterLoop.Chars)
+	}
+}
+
+func asciiSearchMask(chars []rune) *[2]uint64 {
+	if len(chars) <= 3 {
+		return nil
+	}
+	var mask [2]uint64
+	for _, ch := range chars {
+		if uint32(ch) >= 128 {
+			return nil
+		}
+		mask[ch>>6] |= 1 << (uint(ch) & 63)
+	}
+	return &mask
+}
+
+func isASCIIText(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 128 {
+			return false
+		}
+	}
+	return true
 }
 
 func newFindOptimizationsForNode(root *RegexNode, opt ParseOptions, isLeadingPartial bool) *FindOptimizations {

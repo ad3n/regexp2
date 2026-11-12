@@ -129,6 +129,7 @@ func compile(expr string, c compileConfig) (*Regexp, error) {
 			re.stringPrefixFilter = withEqualASCIIPrefixSearch(re.stringPrefixFilter, re.prefixSearch, opts.MinRequiredLength)
 		}
 	}
+	re.findFirstChar = compileFindFirstChar(code)
 	re.initCaptureNames()
 	re.initCaches()
 	return re, nil

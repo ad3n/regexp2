@@ -16,7 +16,7 @@ TEXT ·indexByteRangeSIMD(SB), NOSPLIT, $0-32
 	PSHUFD $0, X1, X1
 vector:
 	CMPQ CX, $16
-	JL scalar
+	JL small
 	MOVOU (SI), X2
 	MOVOU X2, X3
 	PMAXUB X0, X2
@@ -27,11 +27,28 @@ vector:
 	PAND X3, X2
 	PMOVMSKB X2, DX
 	TESTL DX, DX
-	JNZ scalar
+	JNZ found
 	ADDQ $16, SI
 	ADDQ $16, DI
 	SUBQ $16, CX
 	JMP vector
+small:
+	CMPQ CX, $8
+	JL scalar
+	MOVQ (SI), X2
+	MOVOU X2, X3
+	PMAXUB X0, X2
+	PCMPEQB X3, X2
+	PMINUB X1, X3
+	MOVQ (SI), X4
+	PCMPEQB X4, X3
+	PAND X3, X2
+	PMOVMSKB X2, DX
+	ANDL $255, DX
+	JNZ found
+	ADDQ $8, SI
+	ADDQ $8, DI
+	SUBQ $8, CX
 scalar:
 	TESTQ CX, CX
 	JZ miss
@@ -51,6 +68,11 @@ miss:
 	MOVQ $-1, ret+24(FP)
 	RET
 
+found:
+	BSFL DX, DX
+	ADDQ DX, DI
+	MOVQ DI, ret+24(FP)
+	RET
 TEXT ·indexRuneRangeSIMD(SB), NOSPLIT, $0-32
 	MOVQ in+0(FP), SI
 	MOVQ n+8(FP), CX
@@ -72,7 +94,7 @@ vector:
 	POR X3, X4
 	PMOVMSKB X4, DX
 	CMPL DX, $65535
-	JNE scalar
+	JNE found
 	ADDQ $16, SI
 	ADDQ $4, DI
 	SUBQ $4, CX
@@ -94,4 +116,11 @@ next:
 	JMP scalar
 miss:
 	MOVQ $-1, ret+24(FP)
+	RET
+found:
+	XORL $65535, DX
+	BSFL DX, DX
+	SHRL $2, DX
+	ADDQ DX, DI
+	MOVQ DI, ret+24(FP)
 	RET
