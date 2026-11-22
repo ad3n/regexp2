@@ -284,9 +284,10 @@ func (re *Regexp) FindStringMatchStartingAt(s string, startAt int) (*Match, erro
 }
 
 func (re *Regexp) findDecodedStringMatch(s string, candidate, startAt int) (*Match, error) {
-	d := re.decodeStringInput(s, candidate, true)
+	d := re.decodeStringInput(s, candidate)
 	runner := re.getRunner()
 	defer re.putRunner(runner)
+
 	text := runner.stringMatchText(s, d.runes, d.runeOffset, d.byteOffset)
 	origin := re.stringSearchOrigin(s, startAt, d.runeStart)
 	m, err := runner.scan(d.runes, text, origin, d.runeStart, -1, scanFullMatch, re.MatchTimeout)
@@ -391,11 +392,23 @@ func (re *Regexp) findAllRunesIndex(runner *Runner, input []rune, origin, startA
 
 		localIndex := m.runeSliceIndex()
 		if m.RuneLength != 0 || localIndex != prevEnd {
-			if len(out) == 0 && n > 0 {
-				out = make([][]int, 0, n)
-				flat = make([]int, 0, n*2)
-			}
 			start, end := makeIndex(localIndex, m.RuneLength)
+			if len(out) == 0 && n > 0 {
+				if n == 1 {
+					result := new(struct {
+						spans [1][]int
+						pair  [2]int
+					})
+					result.pair = [2]int{start, end}
+					result.spans[0] = result.pair[:]
+					return result.spans[:], nil
+				}
+
+				capacity := min(n, len(input)+1)
+				out = make([][]int, 0, capacity)
+				flat = make([]int, 0, capacity*2)
+			}
+
 			flat = append(flat, start, end)
 			out = append(out, flat[len(flat)-2:len(flat):len(flat)])
 			prevEnd = localIndex + m.RuneLength

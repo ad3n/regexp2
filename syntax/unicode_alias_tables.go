@@ -2,9 +2,6 @@ package syntax
 
 import "unicode"
 
-const unicodePropertyTableVersion = "17.0.0"
-const goUnicodeTableVersion = unicode.Version
-
 // Unicode property alias tables generated from Unicode 17.0.0 data.
 //
 // At generation time, the Go standard library Unicode tables used for scripts,

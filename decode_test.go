@@ -78,7 +78,7 @@ func TestDecodeInputMidRuneStart(t *testing.T) {
 func TestSlicedDecodeSkipsPrefix(t *testing.T) {
 	re := MustCompile(`needle`)
 	input := strings.Repeat("x", 1000) + "needle"
-	d := re.decodeStringInput(input, 1000, true)
+	d := re.decodeStringInput(input, 1000)
 	defer d.release()
 	if d.byteOffset != 1000 {
 		t.Fatalf("byteOffset = %d, want 1000", d.byteOffset)
@@ -95,7 +95,7 @@ func TestSlicedDecodeKeepsBoundarySlack(t *testing.T) {
 	}
 	input := strings.Repeat("x", 1000) + " needle"
 	// candidate is the 'n' of needle, one past the space
-	d := re.decodeStringInput(input, 1001, true)
+	d := re.decodeStringInput(input, 1001)
 	defer d.release()
 	if d.byteOffset != 1000 {
 		t.Fatalf("byteOffset = %d, want slack at 1000, got decode from %d (%q)", d.byteOffset, d.byteOffset, string(d.runes))
@@ -108,7 +108,7 @@ func TestSlicedDecodeKeepsBoundarySlack(t *testing.T) {
 func TestSlicedDecodeDoesNotSliceLookbehind(t *testing.T) {
 	re := MustCompile(`(?<=x)foo`)
 	input := strings.Repeat("z", 50) + "xfoo"
-	d := re.decodeStringInput(input, 51, true)
+	d := re.decodeStringInput(input, 51)
 	defer d.release()
 	if d.byteOffset != 0 {
 		t.Fatalf("lookbehind should decode from 0, got %d", d.byteOffset)

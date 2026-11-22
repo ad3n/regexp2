@@ -2327,22 +2327,12 @@ func (r *Runner) stringMatchText(input string, runes []rune, runeOffset, byteOff
 }
 
 func (r *Runner) initMatch(textInfo *matchText) {
-	// Use a hashtable'ed Match object if the capture numbers are sparse
-
-	if r.runmatch == nil {
-		if r.re.caps != nil {
-			r.runmatch = newMatchSparse(r.re, r.re.caps, r.re.capsize, textInfo, r.Runtextstart)
-		} else {
-			r.runmatch = newMatch(r.re, r.re.capsize, textInfo, r.Runtextstart)
-		}
-	} else {
-		r.runmatch.reset(textInfo, r.Runtextstart)
+	switch r.runmatch {
+	case nil:
+		r.runmatch = newMatch(r.re, textInfo)
+	default:
+		r.runmatch.reset(textInfo)
 	}
-
-	// note we test runcrawl, because it is the last one to be allocated
-	// If there is an alloc failure in the middle of the three allocations,
-	// we may still return to reuse this instance, and we want to behave
-	// as if the allocations didn't occur. (we used to test _trackcount != 0)
 
 	if r.runcrawl != nil {
 		r.Runtrackpos = len(r.runtrack)

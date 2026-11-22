@@ -25,13 +25,17 @@ func (re *Regexp) decodeFrom(s string, startAt int) int {
 	if startAt <= 0 || re.RightToLeft() {
 		return 0
 	}
+
 	need := re.decodeLeftContextRunes()
 	if need < 0 {
 		return 0
 	}
+
 	if need > 0 {
-		return prevRuneByte(s, startAt)
+		_, size := utf8.DecodeLastRuneInString(s[:startAt])
+		return startAt - size
 	}
+
 	return startAt
 }
 
@@ -73,20 +77,15 @@ func decodeString(s string, maxCachedLength int) ([]rune, *[]rune) {
 }
 
 // decodeStringInput decodes into exact-size storage a returned match can own.
-func (re *Regexp) decodeStringInput(s string, startAt int, pooled bool) decodedInput {
-	maxCachedLength := 0
-	if pooled {
-		maxCachedLength = re.optimizations.MaxCachedRuneBufferLength
-	}
+func (re *Regexp) decodeStringInput(s string, startAt int) decodedInput {
 	decodeFrom := max(0, min(re.decodeFrom(s, startAt), len(s)))
 	substr := s[decodeFrom:]
-	buf, pooledBuffer := pooledMatchRuneBuffers.getExact(len(substr), maxCachedLength)
+	buf, pooledBuffer := pooledMatchRuneBuffers.getExact(len(substr), re.optimizations.MaxCachedRuneBufferLength)
 	n, ascii := helpers.DecodeString(substr, buf)
 	out := decodedInput{
 		runes:       buf[:n],
 		pooled:      pooledBuffer,
 		byteOffset:  decodeFrom,
-		ascii:       ascii,
 		runeStart:   startRuneIndex(s, startAt, decodeFrom, n, ascii),
 		matchBuffer: true,
 	}
@@ -150,17 +149,6 @@ func startRuneIndex(s string, startAt, decodeFrom, runeCount int, ascii bool) in
 		i++
 	}
 	return -1
-}
-
-func prevRuneByte(s string, byteIndex int) int {
-	if byteIndex <= 0 {
-		return 0
-	}
-	_, size := utf8.DecodeLastRuneInString(s[:byteIndex])
-	if size <= 0 {
-		return byteIndex - 1
-	}
-	return byteIndex - size
 }
 
 func (d decodedInput) release() {

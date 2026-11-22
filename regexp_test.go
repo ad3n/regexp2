@@ -3,6 +3,7 @@ package regexp2
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -1109,7 +1110,7 @@ func TestFindAllStringIndex(t *testing.T) {
 					if err != nil || matched != (len(tc.want) > 0) {
 						t.Fatalf("Match: got %v, %v; want %v", matched, err, len(tc.want) > 0)
 					}
-					for _, limit := range []int{-1, 0, 1} {
+					for _, limit := range []int{-1, 0, 1, math.MaxInt} {
 						var got [][]int
 						if mode == "string" {
 							got, err = re.FindAllStringIndex(tc.input, limit)
@@ -2267,28 +2268,6 @@ func BenchmarkParserPrefixLongLen(b *testing.B) {
 		}
 	}
 }
-
-/*
-func TestPcreStuff(t *testing.T) {
-	re := MustCompile(`(?(?=(a))a)`, OptionDebug())
-	inp := unEscapeToMatch(`a`)
-	fmt.Printf("Inp %q\n", inp)
-	m, err := re.FindStringMatch(inp)
-
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if m == nil {
-		t.Fatalf("Expected match")
-	}
-
-	fmt.Printf("Match %s\n", m.dump())
-	fmt.Printf("Text: %v\n", unEscapeGroup(m.String()))
-
-}
-*/
-
-//(.*)(\d+) different FirstChars ([\x00-\t\v-\x08] OR [\x00-\t\v-\uffff\p{Nd}]
 
 func TestControlBracketFail(t *testing.T) {
 	re := MustCompile(`(cat)(\c[*)(dog)`)

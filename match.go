@@ -2,7 +2,6 @@ package regexp2
 
 import (
 	"bytes"
-	"fmt"
 	"sync/atomic"
 	"unicode/utf8"
 )
@@ -27,9 +26,7 @@ type Match struct {
 	matchcount []int
 
 	// input to the match
-	textpos   int
-	textstart int
-	capcount  int
+	textpos int
 
 	// whether we've done any balancing with this match. If we have, full
 	// matches need capture-history compaction in tidy.
@@ -198,11 +195,11 @@ func runeByteOffsets(runes []rune) []int {
 	return byteOffsets
 }
 
-func newMatch(regex *Regexp, capcount int, text *matchText, startpos int) *Match {
+func newMatch(regex *Regexp, text *matchText) *Match {
+	capcount := regex.capsize
 	var m *Match
-	if capcount == 1 {
-		// With no explicit capture groups, keep the whole-match bookkeeping in
-		// one allocation rather than allocating three separate slice backings.
+	switch capcount {
+	case 1:
 		storage := new(struct {
 			Match
 			countsAndInterval [3]int
@@ -212,8 +209,7 @@ func newMatch(regex *Regexp, capcount int, text *matchText, startpos int) *Match
 		m.matchcount = storage.countsAndInterval[:1:1]
 		m.matches = storage.intervals[:]
 		m.matches[0] = storage.countsAndInterval[1:]
-	} else {
-		// Capture counts and the initial whole-match interval have the same lifetime.
+	default:
 		countsAndInterval := make([]int, capcount+2)
 		m = &Match{
 			matchcount: countsAndInterval[:capcount:capcount],
@@ -221,27 +217,20 @@ func newMatch(regex *Regexp, capcount int, text *matchText, startpos int) *Match
 		}
 		m.matches[0] = countsAndInterval[capcount:]
 	}
+
 	m.regex = regex
-	m.textstart = startpos
+	m.sparseCaps = regex.caps
+	m.text = text
 	if (regex.options & ECMAScript) == 0 {
 		m.Name = "0"
 	}
-	m.text = text
+
 	return m
 }
 
-func newMatchSparse(regex *Regexp, caps map[int]int, capcount int, text *matchText, startpos int) *Match {
-	m := newMatch(regex, capcount, text, startpos)
-	m.sparseCaps = caps
-	return m
-}
-
-func (m *Match) reset(text *matchText, textstart int) {
+func (m *Match) reset(text *matchText) {
 	m.text = text
-	m.textstart = textstart
-	for i := 0; i < len(m.matchcount); i++ {
-		m.matchcount[i] = 0
-	}
+	clear(m.matchcount)
 	m.balancing = false
 }
 
@@ -250,7 +239,6 @@ func (m *Match) tidy(textpos int) {
 	interval := m.matches[0]
 	setCaptureFields(&m.Capture, interval[0], interval[1])
 	m.textpos = textpos
-	m.capcount = m.matchcount[0]
 	//copy our root capture to the list
 	if m.text != nil && !m.text.initialCaptureUsed {
 		m.text.initialCaptureUsed = true
@@ -502,39 +490,4 @@ func setCaptureFields(c *Capture, runeIndex, runeLength int) {
 	}
 	c.RuneIndex = runeIndex
 	c.RuneLength = runeLength
-}
-
-func (m *Match) dump() string {
-	buf := &bytes.Buffer{}
-	buf.WriteRune('\n')
-	if len(m.sparseCaps) > 0 {
-		for k, v := range m.sparseCaps {
-			fmt.Fprintf(buf, "Slot %v -> %v\n", k, v)
-		}
-	}
-
-	for i, g := range m.Groups() {
-		fmt.Fprintf(buf, "Group %v (%v), %v caps:\n", i, g.Name, len(g.Captures))
-
-		for _, c := range g.Captures {
-			fmt.Fprintf(buf, "  (%v, %v) %v\n", c.RuneIndex, c.RuneLength, c.String())
-		}
-	}
-	/*
-		for i := 0; i < len(m.matchcount); i++ {
-			fmt.Fprintf(buf, "\nGroup %v (%v):\n", i, m.regex.GroupNameFromNumber(i))
-
-			for j := 0; j < m.matchcount[i]; j++ {
-				text := ""
-
-				if m.matches[i][j*2] >= 0 {
-					start := m.matches[i][j*2]
-					text = m.text.runes[start : start+m.matches[i][j*2+1]]
-				}
-
-				fmt.Fprintf(buf, "  (%v, %v) %v\n", m.matches[i][j*2], m.matches[i][j*2+1], text)
-			}
-		}
-	*/
-	return buf.String()
 }
